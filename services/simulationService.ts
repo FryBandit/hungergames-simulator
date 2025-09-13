@@ -1037,6 +1037,36 @@ export const generateDayReport = (
        killTribute(t, allTributes, deaths, 'Succumbed to their injuries.', events, '23:00');
    });
 
+   // Bug Fix: Anti-stagnation logic to prevent infinite loops.
+   // If no deaths occurred this day (and it wasn't the bloodbath), force an encounter.
+   if (deaths.length === 0 && day > 1) {
+       const aliveTributes = allTributes.filter(t => t.status === 'alive');
+       if (aliveTributes.length > 2) {
+           events.push({ text: "The Gamemakers, growing impatient with the lack of action, force two tributes to confront each other.", type: 'arena', timestamp: '23:30' });
+           
+           // Find two tributes who are not allies, if possible.
+           let tribute1: Tribute | undefined;
+           let tribute2: Tribute | undefined;
+           const shuffledTributes = shuffleArray(aliveTributes);
+
+           const nonAllyPair = shuffledTributes.flatMap((t1, i) =>
+               shuffledTributes.slice(i + 1).map(t2 => ({ t1, t2 }))
+           ).find(({ t1, t2 }) => !t1.allies.includes(t2.id));
+
+           if (nonAllyPair) {
+               tribute1 = nonAllyPair.t1;
+               tribute2 = nonAllyPair.t2;
+           } else if (shuffledTributes.length >= 2) {
+               // If all are allies, pick two at random.
+               [tribute1, tribute2] = shuffledTributes.slice(0, 2);
+           }
+
+           if (tribute1 && tribute2) {
+               resolveEncounter(tribute1, tribute2, allTributes, events, deaths, arena, '23:31');
+           }
+       }
+   }
+
   return { updatedTributes: allTributes, dayReport: { summary, events, deaths } };
 };
 

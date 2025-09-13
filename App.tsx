@@ -249,20 +249,13 @@ const App: React.FC = () => {
       setGameLog([...tempLog]);
       
       const stillAlive = updatedTributes.filter(t => t.status === 'alive');
-       if (stillAlive.length === 2) {
-          const { updatedTributes: finalTributes, dayReport: finaleReport } = triggerFinale(updatedTributes, selectedArena);
-          const finaleDay: GameDay = { day: 101, ...finaleReport }; // Use special day number for finale
-          tempLog.push(finaleDay);
-          simulationState.log = tempLog;
-          setGameLog([...tempLog]);
-          finalizeGame(finalTributes, tempLog);
-          return;
-      }
       if (stillAlive.length <= 1) {
-          finalizeGame(updatedTributes, tempLog);
-          return;
+        finalizeGame(updatedTributes, tempLog);
+        return;
       }
       
+      // If more than 1 tribute is alive, continue simulation.
+      // The check for 2 survivors at the start of runSimulationStep will trigger the finale.
       if (settings.pacing === 'stream') {
         setTimeout(runSimulationStep, settings.eventSpeed);
       } else {
