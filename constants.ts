@@ -405,6 +405,7 @@ export const EVENTS = {
             "{name} successfully identifies a set of tracks, gaining valuable information about another tribute's location.",
         ],
         neutral: [
+            "{name} spends a long time grooming themselves, ignoring more pressing needs.",
             "{name} camouflages a shelter, feeling a sense of security.",
             "{name} spends the day honing their survival skills.",
             "{name} feels a surge of adrenaline and determination, ready for what's next.",

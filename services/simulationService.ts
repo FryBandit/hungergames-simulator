@@ -451,6 +451,11 @@ const findBestTargetToHunt = (tribute: Tribute, potentialTargets: Tribute[], day
         const theirPower = calculatePowerScore(t);
         const relScore = tribute.relationships[t.id]?.score ?? 0;
 
+        if (hasTrait(tribute, 'Short-tempered')) {
+            // Will attack anyone not a close ally (score < 60), and takes on tougher fights
+            return relScore < 60 && theirPower < myPower * 1.3;
+        }
+
         if (relScore > 20) return false; // Don't hunt allies
 
         if (hasTrait(tribute, 'Overconfident')) {
@@ -501,6 +506,11 @@ const checkCanCraft = (tribute: Tribute, recipe: typeof RECIPES[0]): boolean => 
 };
 
 const selectTributeAction = (tribute: Tribute, aliveTributes: Tribute[], arena: Arena, day: number): TributeAction => {
+    // Vain trait can override immediate needs
+    if (hasTrait(tribute, 'Vain') && roll() > 12) { // 40% chance to prioritize vanity
+        return { action: 'neutral' };
+    }
+    
     // 1. Immediate, critical needs have the highest priority
     if (tribute.health < 35 && tribute.inventory.some(i => i.type === 'medicine')) return { action: 'heal' };
     if (tribute.health < 25 && roll() > 4) return { action: 'rest' };
@@ -532,7 +542,12 @@ const selectTributeAction = (tribute: Tribute, aliveTributes: Tribute[], arena: 
 
 
     if (decisionRoll > huntUrge) {
-         const potentialTargets = aliveTributes.filter(t => t.id !== tribute.id && !tribute.allies.includes(t.id));
+         let potentialTargets;
+         if (hasTrait(tribute, 'Short-tempered')) {
+             potentialTargets = aliveTributes.filter(t => t.id !== tribute.id); // Can target anyone, even allies
+         } else {
+             potentialTargets = aliveTributes.filter(t => t.id !== tribute.id && !tribute.allies.includes(t.id));
+         }
          const target = findBestTargetToHunt(tribute, potentialTargets, day);
          if (target) {
             return { action: 'hunt', target };
@@ -575,18 +590,20 @@ const handleTrapEncounter = (
 
     // Detection Phase
     const detectionBonus = hasSkill(tribute, 'Technologist') ? 3 : (hasSkill(tribute, 'Naturalist') ? 2 : 0);
+    const detectionModifier = hasTrait(tribute, 'Clumsy') ? -3 : 0;
     const detectionRoll = roll() + Math.floor(stats.intelligence / 2);
 
-    if (detectionRoll + detectionBonus >= trap.detectionDC) {
+    if (detectionRoll + detectionBonus + detectionModifier >= trap.detectionDC) {
         events.push({ text: trap.successDescription.replace('{name}', tribute.name), type: 'positive', timestamp });
         return; // Trap avoided
     }
 
     // Evasion Phase
     const evasionBonus = hasSkill(tribute, 'Sprinter') ? 3 : 0;
+    const evasionModifier = hasTrait(tribute, 'Clumsy') ? -3 : 0;
     const evasionRoll = roll() + Math.floor(stats.agility / 2);
 
-    if (evasionRoll + evasionBonus >= trap.evasionDC) {
+    if (evasionRoll + evasionBonus + evasionModifier >= trap.evasionDC) {
         let evadeDamage = Math.floor(trap.damage / 4);
         tribute.health -= evadeDamage;
         events.push({ text: trap.evadeDescription.replace('{name}', tribute.name), type: 'neutral', timestamp });
@@ -795,7 +812,7 @@ const handleAllianceFormation = (
 
         for (let j = i + 1; j < tributes.length; j++) {
             const target = tributes[j];
-            if (target.allies.length > 2 || target.allies.includes(initiator.id)) continue;
+            if (target.allies.length > 2 || target.allies.includes(initiator.id) || hasTrait(target, 'Paranoid') || hasTrait(target, 'Arrogant')) continue;
 
             const initiatorPersonality = getPersonality(initiator);
             const targetPersonality = getPersonality(target);
@@ -808,6 +825,9 @@ const handleAllianceFormation = (
             if(initiator.district === target.district) chance += 10;
             if (initiator.relationships[target.id] && initiator.relationships[target.id].score > 0) {
                  chance += Math.floor(initiator.relationships[target.id].score / 10);
+            }
+            if (hasTrait(target, 'Trusting')) {
+                chance += 5;
             }
 
             if (roll() < chance) {
@@ -851,8 +871,12 @@ const handleBetrayal = (
                 
                 // Simplified combat for betrayal, heavy advantage to attacker
                 const tributePower = calculatePowerScore(tribute) + 20 + roll(); // Surprise bonus
-                const allyPower = calculatePowerScore(ally) + roll();
+                let allyPower = calculatePowerScore(ally) + roll();
                 
+                if (hasTrait(ally, 'Trusting')) {
+                    allyPower *= 0.75; // More susceptible to betrayal
+                }
+
                 if (tributePower > allyPower) {
                     const cause = getRandomElement(DEATHS.betrayal).replace('{attacker}', tribute.name);
                     killTribute(ally, allTributes, deaths, cause, events, timestamp);
@@ -891,7 +915,7 @@ export const generateDayReport = (
 
   // Bloodbath Logic for Day 1
   if (day === 1) {
-    const bloodbathContestants = tributesToProcess.filter(t => {
+    let bloodbathContestants = tributesToProcess.filter(t => {
       const personality = getPersonality(t);
       return personality === 'Career' || personality === 'Brute' || hasTrait(t, 'Reckless');
     });
@@ -906,14 +930,15 @@ export const generateDayReport = (
     let bloodbathIteration = 0;
     // We will simulate encounters until the desired number of deaths is reached or not enough contestants are left.
     while (bloodbathDeathsCount < settings.bloodbathDeaths) {
-        let aliveContestants = bloodbathContestants.filter(t => {
+        // Re-filter the contestants list in each iteration to remove the dead
+        bloodbathContestants = bloodbathContestants.filter(t => {
             const currentTributeState = getTributeById(allTributes, t.id);
             return currentTributeState && currentTributeState.status === 'alive';
         });
 
-        if (aliveContestants.length < 2) break;
+        if (bloodbathContestants.length < 2) break;
 
-        const [initiator, target] = shuffleArray(aliveContestants).slice(0, 2);
+        const [initiator, target] = shuffleArray(bloodbathContestants).slice(0, 2);
 
         if (initiator && target) {
             const deathsBefore = deaths.length;
@@ -973,6 +998,17 @@ export const generateDayReport = (
           const { action, target, recipe } = selectTributeAction(tribute, tributesToProcess, arena, day);
           performAction(tribute, action, allTributes, events, deaths, arena, timestamp, { target, recipe });
           if (tribute.status !== 'alive') return;
+
+          if (hasTrait(tribute, 'Loud') && roll() > 14) { // ~30% chance of attracting attention
+              const nearbyTributes = allTributes.filter(t => t.status === 'alive' && t.id !== tribute.id && !tribute.allies.includes(t.id));
+              if (nearbyTributes.length > 0) {
+                  const attractedTribute = getRandomElement(nearbyTributes);
+                  events.push({ text: `${tribute.name}'s carelessness makes a loud noise, attracting ${attractedTribute.name}.`, type: 'negative', timestamp });
+                  // The attracted tribute is now the initiator
+                  resolveEncounter(attractedTribute, tribute, allTributes, events, deaths, arena, timestamp);
+                  if (tribute.status !== 'alive') return;
+              }
+          }
           
           // Sponsor gift check
           checkForSponsorGift(tribute, events, timestamp);

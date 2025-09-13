@@ -137,8 +137,8 @@ const GameSummary: React.FC<GameSummaryProps> = ({ summary, onReset }) => {
                 <div className="bg-slate-800 p-6 rounded-lg">
                     <h3 className="text-2xl font-bold text-amber-400 mb-4 flex items-center gap-3"><TimelineIcon />Timeline of the Fallen</h3>
                     <ul className="space-y-3 max-h-[calc(30rem+190px)] overflow-y-auto">
-                        {timeline.map((entry, i) => (
-                            <li key={i} className="flex items-start gap-3 text-sm">
+                        {timeline.map((entry) => (
+                            <li key={entry.tributeId} className="flex items-start gap-3 text-sm">
                                 <span className="font-bold text-amber-500 w-16 shrink-0">Day {entry.day}:</span>
                                 <p className="text-slate-300 flex-1"><span className="font-semibold">{entry.tributeName}</span> - {entry.cause}</p>
                             </li>

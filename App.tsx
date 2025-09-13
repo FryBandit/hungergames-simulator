@@ -18,20 +18,20 @@ const applyArenaEffects = (tributes: Tribute[], arena: Arena): Tribute[] => {
         const applicableEffect = arena.effects.find(e => e.districts.includes(newTribute.district));
         if (applicableEffect) {
             if (applicableEffect.buffs) {
-                for (const stat in applicableEffect.buffs) {
-                    const key = stat as TributeStat;
-                    if(newTribute[key]) {
-                        newTribute[key] = Math.min(10, newTribute[key] + (applicableEffect.buffs[key] || 0));
+                (Object.keys(applicableEffect.buffs) as TributeStat[]).forEach(stat => {
+                    const value = applicableEffect.buffs[stat] || 0;
+                    if (typeof newTribute[stat] === 'number') {
+                        newTribute[stat] = Math.min(10, newTribute[stat] + value);
                     }
-                }
+                });
             }
             if (applicableEffect.nerfs) {
-                for (const stat in applicableEffect.nerfs) {
-                     const key = stat as TributeStat;
-                     if(newTribute[key]) {
-                        newTribute[key] = Math.max(1, newTribute[key] - (applicableEffect.nerfs[key] || 0));
-                     }
-                }
+                (Object.keys(applicableEffect.nerfs) as TributeStat[]).forEach(stat => {
+                    const value = applicableEffect.nerfs[stat] || 0;
+                    if (typeof newTribute[stat] === 'number') {
+                        newTribute[stat] = Math.max(1, newTribute[stat] - value);
+                    }
+                });
             }
         }
         return newTribute;
@@ -148,13 +148,23 @@ const App: React.FC = () => {
       let currentTributes = initialTributes;
       let tempLog = initialLog;
       let day = 0;
+      let iterations = 0;
       
       while(true) {
+        iterations++;
+        if (iterations > 150) { // Safety break
+            console.error("Max iterations reached in simulation. Forcing sudden death.");
+            const { updatedTributes, dayReport } = triggerSuddenDeath(currentTributes, arena);
+            tempLog.push({ day: day + 1, ...dayReport });
+            finalizeGame(updatedTributes, tempLog);
+            break;
+        }
+
         let aliveTributes = currentTributes.filter(t => t.status === 'alive');
         
         if (aliveTributes.length === 2) {
             const { updatedTributes, dayReport } = triggerFinale(currentTributes, arena);
-            const finaleDay: GameDay = { day: day + 1, ...dayReport };
+            const finaleDay: GameDay = { day: 101, ...dayReport };
             tempLog.push(finaleDay);
             finalizeGame(updatedTributes, tempLog);
             break;
@@ -194,7 +204,7 @@ const App: React.FC = () => {
     
     if (aliveTributes.length === 2) {
         const { updatedTributes, dayReport } = triggerFinale(currentTributes, selectedArena);
-        const finaleDay: GameDay = { day: day + 1, ...dayReport };
+        const finaleDay: GameDay = { day: 101, ...dayReport };
         tempLog.push(finaleDay);
         setGameLog([...tempLog]);
         finalizeGame(updatedTributes, tempLog);
@@ -241,7 +251,7 @@ const App: React.FC = () => {
       const stillAlive = updatedTributes.filter(t => t.status === 'alive');
        if (stillAlive.length === 2) {
           const { updatedTributes: finalTributes, dayReport: finaleReport } = triggerFinale(updatedTributes, selectedArena);
-          const finaleDay: GameDay = { day: day + 0.5, ...finaleReport }; // Use fractional day for finale
+          const finaleDay: GameDay = { day: 101, ...finaleReport }; // Use special day number for finale
           tempLog.push(finaleDay);
           simulationState.log = tempLog;
           setGameLog([...tempLog]);
