@@ -1,0 +1,5 @@
+{
+  "name": "Hunger Games Simulator",
+  "description": "A text-based simulator where 24 CPU tributes battle in an arena until only one remains. Users can configure settings like the arena type and watch the AI-generated story unfold day by day.",
+  "requestFramePermissions": []
+}
