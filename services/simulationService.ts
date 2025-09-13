@@ -880,7 +880,6 @@ export const generateDayReport = (
   arena: Arena,
   settings: { bloodbathDeaths: number }
 ): { updatedTributes: Tribute[]; dayReport: Omit<GameDay, 'day'> } => {
-  // FIX: Explicitly type `allTributes` as Tribute[] to fix type errors from JSON.parse.
   const allTributes: Tribute[] = JSON.parse(JSON.stringify(initialTributes));
   const events: GameEvent[] = [];
   const deaths: { tributeName: string; tributeId: number; cause: string }[] = [];
@@ -903,12 +902,28 @@ export const generateDayReport = (
         events.push({ text: `${t.name} immediately flees the Cornucopia, disappearing into the arena.`, type: 'neutral', timestamp: '00:01' });
     });
 
+    let bloodbathDeathsCount = 0;
+    let bloodbathIteration = 0;
+    // We will simulate encounters until the desired number of deaths is reached or not enough contestants are left.
+    while (bloodbathDeathsCount < settings.bloodbathDeaths) {
+        let aliveContestants = bloodbathContestants.filter(t => {
+            const currentTributeState = getTributeById(allTributes, t.id);
+            return currentTributeState && currentTributeState.status === 'alive';
+        });
 
-    for (let i = 0; i < settings.bloodbathDeaths && bloodbathContestants.length >= 2; i++) {
-        const [initiator, target] = shuffleArray(bloodbathContestants.filter(t => t.status === 'alive')).slice(0, 2);
+        if (aliveContestants.length < 2) break;
+
+        const [initiator, target] = shuffleArray(aliveContestants).slice(0, 2);
+
         if (initiator && target) {
-            resolveEncounter(initiator, target, allTributes, events, deaths, arena, `00:${i < 10 ? '0' : ''}${i+2}`, true);
+            const deathsBefore = deaths.length;
+            resolveEncounter(initiator, target, allTributes, events, deaths, arena, `00:${bloodbathIteration < 8 ? '0' : ''}${bloodbathIteration+2}`, true);
+            const deathsAfter = deaths.length;
+            bloodbathDeathsCount += (deathsAfter - deathsBefore);
         }
+
+        bloodbathIteration++;
+        if (bloodbathIteration > 24) break; // Safety break
     }
   }
 
@@ -993,7 +1008,6 @@ export const triggerFinale = (
     tributes: Tribute[],
     arena: Arena
 ): { updatedTributes: Tribute[]; dayReport: Omit<GameDay, 'day'> } => {
-    // FIX: Explicitly type `allTributes` as Tribute[] to fix type errors from JSON.parse.
     const allTributes: Tribute[] = JSON.parse(JSON.stringify(tributes));
     const events: GameEvent[] = [];
     const deaths: { tributeName: string; tributeId: number; cause: string }[] = [];
@@ -1020,7 +1034,6 @@ export const triggerSuddenDeath = (
     tributes: Tribute[],
     arena: Arena
 ): { updatedTributes: Tribute[]; dayReport: Omit<GameDay, 'day'> } => {
-    // FIX: Explicitly type `allTributes` as Tribute[] to fix type errors from JSON.parse.
     const allTributes: Tribute[] = JSON.parse(JSON.stringify(tributes));
     const events: GameEvent[] = [];
     const deaths: { tributeName: string; tributeId: number; cause: string }[] = [];
@@ -1076,7 +1089,6 @@ export const initializeRelationships = (tributes: Tribute[]): Tribute[] => {
 };
 
 export const generateTrainingDayReport = (initialTributes: Tribute[]): { updatedTributes: Tribute[]; dayReport: Omit<GameDay, 'day'> } => {
-    // FIX: Explicitly type `allTributes` as Tribute[] to fix type errors from JSON.parse.
     const allTributes: Tribute[] = JSON.parse(JSON.stringify(initialTributes));
     const events: GameEvent[] = [];
     const summary = "The tributes spend their final days before the games in the training center, honing their skills and forming tentative bonds—or rivalries.";
