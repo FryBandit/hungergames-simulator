@@ -43,8 +43,9 @@ const EventLog = forwardRef<HTMLDivElement, EventLogProps>(({ log, isLoading, cu
     if (dayData.day === -0.5) dayTitle = "The Culling";
     if (dayData.day === 0.5 || dayData.day > 100) dayTitle = "The Finale"; // Finale day
     
+    const importantEventTypes: ReadonlyArray<GameEvent['type']> = ['death', 'combat', 'alliance', 'betrayal', 'arena', 'trap', 'negative'];
     const eventsToRender = showImportantEventsOnly
-        ? dayData.events.filter(e => e.type !== 'neutral')
+        ? dayData.events.filter(e => importantEventTypes.includes(e.type))
         : dayData.events;
 
     return (

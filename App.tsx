@@ -152,7 +152,7 @@ const App: React.FC = () => {
       
       while(true) {
         iterations++;
-        if (iterations > 150) { // Safety break
+        if (iterations > 50) { // Safety break
             console.error("Max iterations reached in simulation. Forcing sudden death.");
             const { updatedTributes, dayReport } = triggerSuddenDeath(currentTributes, arena);
             tempLog.push({ day: day + 1, ...dayReport });

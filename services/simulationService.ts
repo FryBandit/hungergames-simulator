@@ -153,21 +153,23 @@ const killTribute = (
             }
         });
 
-        // Update allies array for all tributes
+        const deadTributeId = tributeToUpdate.id;
+        // Find the alliance members of the deceased tribute BEFORE lists are modified.
+        const alliancePeerIds = [...tributeToUpdate.allies];
+
+        // Update allies array for all tributes, removing the dead member
         allTributes.forEach(t => {
-            if (t.allies.includes(tribute.id)) {
-                t.allies = t.allies.filter(id => id !== tribute.id);
-                if (t.allies.length <= 1) {
-                    t.allianceName = undefined;
-                    if (t.allies.length === 1) {
-                        const lastAlly = getTributeById(allTributes, t.allies[0]);
-                        if (lastAlly) {
-                            lastAlly.allianceName = undefined;
-                        }
-                    }
-                }
-            }
+            t.allies = t.allies.filter(id => id !== deadTributeId);
         });
+
+        // If the alliance the dead tribute belonged to now has fewer than 2 people, it dissolves.
+        if (alliancePeerIds.length === 1) { // It was an alliance of 2 (the dead tribute + 1 peer)
+            const lastMember = getTributeById(allTributes, alliancePeerIds[0]);
+            if(lastMember) {
+                lastMember.allianceName = undefined;
+                // The .allies array for lastMember was already cleared in the loop above.
+            }
+        }
     }
 };
 
@@ -956,8 +958,6 @@ export const generateDayReport = (
   tributesToProcess = shuffleArray(allTributes.filter((t: Tribute) => t.status === 'alive'));
   
   tributesToProcess.forEach((tribute: Tribute) => {
-    tribute.daysSurvived = day > 0 ? (tribute.daysSurvived || 0) + 1 : 0;
-    
     // Vitals decrease
     tribute.food -= 10 + roll(5);
     tribute.water -= 12 + roll(5);
@@ -1066,6 +1066,13 @@ export const generateDayReport = (
            }
        }
    }
+   
+  // Tributes who survived the day get their day count incremented.
+  allTributes.forEach((tribute: Tribute) => {
+    if (tribute.status === 'alive' && day > 0) {
+        tribute.daysSurvived++;
+    }
+  });
 
   return { updatedTributes: allTributes, dayReport: { summary, events, deaths } };
 };
