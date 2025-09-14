@@ -7,6 +7,7 @@ import { PodiumIcon } from './icons/PodiumIcon';
 import { TimelineIcon } from './icons/TimelineIcon';
 import { ScrollIcon } from './icons/ScrollIcon';
 import GameStatistics from './GameStatistics';
+import WinnerDisplay from './WinnerDisplay';
 
 interface GameSummaryProps {
   summary: GameSummary;
@@ -97,9 +98,13 @@ const FullLogModal: React.FC<{ log: GameDay[], onClose: () => void }> = ({ log, 
 const GameSummary: React.FC<GameSummaryProps> = ({ summary, onReset }) => {
   const { winner, placements, timeline, log } = summary;
   const [showLog, setShowLog] = useState(false);
+  const [showWinnerModal, setShowWinnerModal] = useState(!!winner);
 
   return (
     <>
+    {showWinnerModal && winner && (
+        <WinnerDisplay winner={winner} onReset={onReset} onClose={() => setShowWinnerModal(false)} />
+    )}
     {showLog && <FullLogModal log={log} onClose={() => setShowLog(false)} />}
     <div className="fixed inset-0 bg-slate-900 bg-opacity-95 z-50 p-4 sm:p-6 lg:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto animate-fade-in">

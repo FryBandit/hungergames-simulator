@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { GameSettings } from '../types';
 import { GameState } from '../types';
@@ -153,10 +154,14 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ settings, setSettings, onStar
         </div>
       </div>
       
-      <div className="mt-8 space-y-3">
+      <div className="mt-8 flex flex-col sm:flex-row gap-3">
         <button onClick={onStart} disabled={isSimulating} className="w-full flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-all duration-200 disabled:bg-slate-600 disabled:cursor-not-allowed transform hover:scale-105">
           <PlayIcon className="h-5 w-5" />
           {gameState === GameState.Finished ? 'Play Again' : 'Proceed to The Reaping'}
+        </button>
+        <button onClick={onReset} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rose-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-rose-700 transition-all duration-200">
+            <ResetIcon className="h-5 w-5"/>
+            Reset
         </button>
       </div>
       <style>{`
